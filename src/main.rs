@@ -3,27 +3,13 @@ extern crate glfw;
 
 use std::error::Error;
 
+use crate::sandbox::prelude::*;
 use glam::{Vec3, Vec4, vec4, vec3};
-use glfw::{Action, Context, Key};
+use glfw::{Action, Context};
 
-use crate::{
-    buffer::{VertexBuffer, VProp, VType},
-    renderer::{DEFAULT_VB, Renderable, RenderError},
-};
-
-pub mod buffer;
-pub mod camera;
-pub mod mouse;
-pub mod primitive;
-pub mod renderer;
-pub mod shader;
+pub mod sandbox;
 pub mod utils;
-pub mod window;
 
-// TODO: move inside main()
-static mut T1: f64 = 0.0;
-static mut T2: f64 = 0.0;
-static mut DT: f64 = 0.0;
 
 struct Rect {
     pub pos: Vec3,
@@ -32,7 +18,7 @@ struct Rect {
 }
 
 impl Renderable for Rect {
-    fn to_buffer(&self, buf: &mut VertexBuffer) -> Result<(), renderer::RenderError> {
+    fn to_buffer(&self, buf: &mut VertexBuffer) -> Result<(), sandbox::renderer::RenderError> {
         let mut offset = buf.vb.len();
 
         // get attrib info and do checks
@@ -109,13 +95,27 @@ impl Renderable for Rect {
 }
 
 pub fn main() -> Result<(), Box<dyn Error>> {
+    // timers
+    let mut t1: f64;
+    let mut t2: f64;
+    let mut dt: f64 = 1.0 / 60.0;
+
     // starting window
 
     let mut glfw: glfw::Glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
-    let (mut window, events) = glfw.create_window(680, 400, TITLE, glfw::WindowMode::Windowed)
-        .expect("Failed to create GLFW window.");
+    let (mut window, events) = glfw.create_window(
+        DEFAULT_WH.0 as u32,
+        DEFAULT_WH.1 as u32,
+        TITLE,
+        glfw::WindowMode::Windowed
+    ).expect("Failed to create GLFW window.");
+
     window.set_key_polling(true);
+    window.set_size_polling(true);
+    window.set_cursor_pos_polling(true);
+    window.set_mouse_button_polling(true);
+    window.set_scroll_polling(true);
     window.make_current();
 
     glfw.default_window_hints();
@@ -123,31 +123,37 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     // gl
     gl::load_with(|s| window.get_proc_address(s) as * const _);
-
     renderer::start();
+    unsafe { gl::Viewport(0, 0, DEFAULT_WH.0 as i32, DEFAULT_WH.1 as i32); }
 
-
-    let r: Rect = Rect{pos: vec3(0.0, 0.0, 0.0), whd: vec3(1.0, 1.0, 1.0), color: vec4(1.0, 1.0, 1.0, 1.0)};
-
+    let mut r: Rect = Rect{pos: vec3(0.0, 0.0, 1.0), whd: vec3(1.0, 1.0, 1.0), color: vec4(1.0, 1.0, 1.0, 1.0)};
 
     while !window.should_close() {
-        unsafe { T1 = glfw.get_time(); }
+        t1 = glfw.get_time();
 
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event);
+            handle_window_event(&mut window, event, dt);
         }
-        unsafe { r.to_buffer(&mut DEFAULT_VB)?; }
+
+        r.color.x = f32::powf(f32::cos(t1 as f32), 2.0);
+        r.color.y = f32::powf(f32::sin(t1 as f32), 2.0);
+        r.color.z = f32::powf(-f32::cos(t1 as f32), 2.0);
+
+        unsafe { r.to_buffer(&mut sandbox::renderer::DEFAULT_VB)?; }
+
+        /*
+        Camera::get().orient.z = f32::cos(t1 as f32);
+        Camera::get().orient.y = f32::sin(t1 as f32);
+        Camera::get().orient = Camera::get().orient.normalize();
+        */
 
         renderer::update();
 
-
         window.swap_buffers();
 
-        unsafe {
-            T2 = glfw.get_time();
-            DT = T2 - T1;
-        };
+        t2 = glfw.get_time();
+        dt = t2 - t1;
     }
 
     renderer::stop();
@@ -157,10 +163,18 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
 const TITLE: &str = "Quick Render Screen";
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, dt: f64) {
     match event {
-        glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-            window.set_should_close(true);
+        glfw::WindowEvent::Key(key, _, Action::Press, _) => {
+            match key {
+                glfw::Key::W => Camera::get().pos.z += dt as f32,
+                glfw::Key::S => Camera::get().pos.z -= dt as f32,
+                glfw::Key::A => Camera::get().pos.x -= dt as f32,
+                glfw::Key::D => Camera::get().pos.x += dt as f32,
+                glfw::Key::Space => println!("{}", utils::mouse_pos()),
+                glfw::Key::Escape => window.set_should_close(true),
+                _ => {}
+            }
         }
         glfw::WindowEvent::MouseButton(button, action, _) => {
             mouse::mouse_button_event(button, action);

@@ -1,10 +1,12 @@
 use glam::{Vec2, Vec4};
 
-use crate::camera::Camera;
-use crate::{mouse, window};
+use crate::sandbox::camera::Camera;
+use crate::sandbox::{mouse, window};
 
 pub fn mouse_pos() -> Vec2 {
     let mut pos: Vec2 = Vec2::new(mouse::pos().0 as f32, mouse::pos().1 as f32);
+
+    println!("{:?}", window::get_width_height());
 
     // transform pos to OpenGL coords (x: [-1, 1], y: [-1,1])
     let wwh = Vec2::new(window::get_width_height().0 as f32, window::get_width_height().1 as f32);

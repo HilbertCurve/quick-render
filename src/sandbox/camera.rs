@@ -4,7 +4,7 @@ use glam::{Vec3, Quat, Mat4};
 use std::sync::Once;
 use std::mem::{MaybeUninit};
 
-use crate::window;
+use crate::sandbox::window;
 
 const PI: f32 = 3.14159265359;
 
@@ -15,18 +15,18 @@ pub enum CameraMode {
 }
 
 pub struct Camera {
-    pos: Vec3,
-    orient: Quat,
-    fov: f32,
-    zoom: f32,
-    mode: CameraMode,
+    pub pos: Vec3,
+    pub orient: Quat,
+    pub fov: f32,
+    pub zoom: f32,
+    pub mode: CameraMode,
 }
 
 impl Camera {
     fn new() -> Camera {
         Camera {
-            pos: Vec3::new(0.0, 0.0, 1.0),
-            orient: Quat::from_xyzw(0.0, 0.0, 0.0, 0.0),
+            pos: Vec3::new(0.0, 0.0, 0.0),
+            orient: Quat::from_xyzw(1.0, 0.0, 0.0, 0.0),
             fov: PI / 3.0,
             zoom: 1.0,
             mode: CameraMode::Perspective,

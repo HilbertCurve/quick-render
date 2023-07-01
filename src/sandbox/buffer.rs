@@ -1,5 +1,5 @@
-use crate::primitive;
-use crate::renderer::RenderError;
+use crate::sandbox::primitive;
+use crate::sandbox::renderer::RenderError;
 use crate::utils::block::Block;
 
 use std::mem;
@@ -51,9 +51,9 @@ pub struct VertexBuffer {
     vao: u32,
     vbo: u32,
     ibo: u32,
-    pub layout: Vec<VAttrib>, // should this be a slice???
+    pub layout: Vec<VAttrib>,
     pub is_used: bool,
-    prim: &'static primitive::Primitive,
+    pub prim: &'static primitive::Primitive,
     /// Number of elements to be rendered, as based on vb.len();
     /// The user is responsible for managing the value of this item,
     /// as doing so automatically could lead to UB
@@ -157,7 +157,9 @@ impl VertexBuffer {
         }
 
         unsafe {
-            self.vb.resize(self.size as usize * self.layout_len() as usize);
+            self.vb.resize(self.size as usize *
+                           self.prim.vert_count as usize *
+                           self.layout_len() as usize);
             self.ib.resize(self.size as usize *
                            self.prim.index_count as usize *
                            std::mem::size_of::<u32>());
@@ -167,7 +169,7 @@ impl VertexBuffer {
 
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (self.vb.len() * mem::size_of::<f32>()) as isize,
+                (self.vb.len()) as isize,
                 self.vb.as_ptr().cast(),
                 gl::DYNAMIC_DRAW
                 );
